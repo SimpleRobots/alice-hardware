@@ -6,6 +6,7 @@ from ultrasonic import Sensor
 
 HOST = "0.0.0.0"
 PORT = 2323
+POLL_RATE_HZ = 10
 
 class Connection(object):
     def __init__(self, socket, parent):
@@ -85,6 +86,7 @@ class HardwareNetworkAPI(object):
         while True:
             measurement = self.sensor.poll()
             self.send_all_ais("sense " + " ".join(str(x) for x in measurement))
+            sleep( 1.0 / POLL_RATE_HZ )
 
     def accept_connection(self):
         while True:
