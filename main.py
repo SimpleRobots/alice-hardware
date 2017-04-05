@@ -49,6 +49,13 @@ class Connection(object):
             except:
                 break
 
+    def send(self, msg):
+        try:
+            self.sock.send(msg + "\n")
+        except:
+            print("Human disconnected")
+            self.parent.disconnected(self)
+    
     def send_to_human(self, msg):
         if self.is_human:
             try:
@@ -85,7 +92,7 @@ class HardwareNetworkAPI(object):
     def sensor_loop(self):
         while True:
             measurement = self.sensor.poll()
-            self.send_all_ais("sense " + " ".join(str(x) for x in measurement))
+            self.send_all("sense " + " ".join(('%.2f' % x) for x in measurement))
             sleep( 1.0 / POLL_RATE_HZ )
 
     def accept_connection(self):
@@ -95,6 +102,15 @@ class HardwareNetworkAPI(object):
     
     def disconnected(self, conn):
         self.mark_for_removal.append(conn)
+
+    def send_all(self, msg):
+        self.lock.acquire()
+        for x in self.connections:
+            x.send(msg)
+        for x in self.mark_for_removal:
+            self.connections.remove(x)
+        self.mark_for_removal = []
+        self.lock.release()
 
     def send_all_ais(self, msg):
         self.lock.acquire()
