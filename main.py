@@ -4,8 +4,19 @@ import socket
 import threading
 from ultrasonic import Sensor
 
+import pickle
+import struct
+
+HAS_CV = False
+try:
+    import cv2
+    HAS_CV = True
+except:
+    pass
+
 HOST = "0.0.0.0"
 PORT = 2323
+VID_PORT = 2324
 POLL_RATE_HZ = 10
 
 class Connection(object):
@@ -89,17 +100,50 @@ class HardwareNetworkAPI(object):
         t.daemon = True
         t.start()
 
+        if HAS_CV:
+            self.cap = cv2.VideoCapture(0)
+            self.vid_connections = []
+            self.vid_mark_for_removal = []
+            self.vid_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.vid_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.vid_sock.bind((HOST, VID_PORT))
+            self.vid_sock.listen(10)
+            t = threading.Thread(target=self.accept_vid_connection)
+            t.daemon = True
+            t.start()
+
     def sensor_loop(self):
         while True:
             measurement = self.sensor.poll()
             self.send_all("sense " + " ".join(('%.2f' % x) for x in measurement))
             sleep( 1.0 / POLL_RATE_HZ )
+            if HAS_CV:
+                self.send_vid()
 
     def accept_connection(self):
         while True:
             (clientsocket, address) = self.sock.accept()
             self.connections.append(Connection(clientsocket, self))
-    
+
+    def accept_vid_connection(self):
+        while True:
+            (clientsocket, address) = self.sock.accept()
+            self.vid_connections.append(clientsocket)
+
+    def send_vid(self):
+        self.lock.acquire()
+        ret, frame = self.cap.read()
+        data = pickle.dumps(frame)
+        for x in self.vid_connections:
+            try:
+                x.sendall(struct.pack("L", len(data)) + data)
+            except:
+                self.vid_mark_for_removal.append(x)
+        for x in self.vid_mark_for_removal:
+            self.vid_connections.remove(x)
+        self.vid_mark_for_removal = []
+        self.lock.release()
+
     def disconnected(self, conn):
         self.mark_for_removal.append(conn)
 
