@@ -3,16 +3,16 @@ from time import sleep
 import socket
 import threading
 from ultrasonic import Sensor
-
+import sys
 import pickle
 import struct
-
+print(struct.calcsize("L"))
 HAS_CV = False
 try:
     import cv2
     HAS_CV = True
 except:
-    pass
+    print("No CV found.")
 
 HOST = "0.0.0.0"
 PORT = 2323
@@ -124,19 +124,28 @@ class HardwareNetworkAPI(object):
         while True:
             (clientsocket, address) = self.sock.accept()
             self.connections.append(Connection(clientsocket, self))
+            print("Normal client connected")
+            sys.stdout.flush()
 
     def accept_vid_connection(self):
         while True:
-            (clientsocket, address) = self.sock.accept()
+            (clientsocket, address) = self.vid_sock.accept()
             self.vid_connections.append(clientsocket)
+            print("Camera client connected")
+            sys.stdout.flush()
 
     def send_vid(self):
         self.lock.acquire()
         ret, frame = self.cap.read()
+        if not ret:
+            self.lock.release()
+            return
+        frame = cv2.resize(frame, (200, 150)) 
         data = pickle.dumps(frame)
         for x in self.vid_connections:
             try:
-                x.sendall(struct.pack("L", len(data)) + data)
+                x.send(struct.pack("L", len(data)))
+                x.send(data)
             except:
                 self.vid_mark_for_removal.append(x)
         for x in self.vid_mark_for_removal:
