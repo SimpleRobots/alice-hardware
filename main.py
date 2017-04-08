@@ -95,8 +95,6 @@ class HardwareNetworkAPI(object):
             measurement = self.sensor.poll()
             self.send_all("sense " + " ".join(('%.2f' % x) for x in measurement))
             sleep( 1.0 / POLL_RATE_HZ )
-            if HAS_CV:
-                self.send_vid()
 
     def accept_connection(self):
         while True:
