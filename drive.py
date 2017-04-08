@@ -1,6 +1,6 @@
 import RPi.GPIO as GPIO
 
-PWM_FREQ = 20
+PWM_FREQ = 40
 LEFT_PWM = 11
 RIGHT_PWM = 3
 
