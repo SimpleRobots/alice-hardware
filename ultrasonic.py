@@ -12,6 +12,6 @@ class Sensor(object):
             dist = lu.measure_distance(sensor[0], sensor[1])
             dist = dist / 100.0
             if dist > 2.0:
-                dist = 0
+                dist = 2.0
             result.append(dist)
         return result
