@@ -3,7 +3,26 @@ The hardware specification for alice. Including a library to controll the hardwa
 
 ## Installation
 
-TODO
+Install dependencies
+
+```bash
+sudo apt-get install python screen
+```
+
+Clone the repository into the folder /home/pi/git.
+
+```bash
+# If not using /home/pi/git folder you have to fix the launch.sh script with the correct path.
+cd /home/pi/git
+git clone https://github.com/penguinmenac3/alice-hardware.git
+```
+
+You can make alice-harware automatically launch on boot by adding the following to your rc.local
+
+```bash
+sudo nano /etc/rc.local
+sudo -su pi /home/pi/git/alice-hardware/launch.sh
+```
 
 ## Usage
 
