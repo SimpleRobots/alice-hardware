@@ -29,24 +29,27 @@ class Connection(object):
                 if cmd == "human":
                     print("Human registered")
                     self.is_human = True
-                if cmd == "ai":
+                elif cmd == "ai":
                     print("AI registered")
                     self.is_ai = True
-                if cmd == "drive" and self.is_human:
+                elif cmd == "drive" and self.is_human:
                     if self.parent.ai_mode:
                         print("Human stealing control")
                     self.parent.ai_mode = False
                     self.parent.d.set_speed(int(parts[1]), int(parts[2]))
                     self.parent.send_all_ais(raw_cmd)
-                if cmd == "drive" and self.is_ai and self.parent.ai_mode:
+                elif cmd == "drive" and self.is_ai and self.parent.ai_mode:
                     self.parent.d.set_speed(int(parts[1]), int(parts[2]))
                     self.parent.send_all_ais(raw_cmd)
-                if cmd == "reward":
+                elif cmd == "reward":
                     print(raw_cmd)
                     self.parent.send_all_ais(raw_cmd)
-                if cmd == "ai_mode" and self.is_human:
+                elif cmd == "ai_mode" and self.is_human:
                     print("Handing over to ai")
                     self.parent.ai_mode = True
+                elif len(parts) == 6 and not self.is_ai and not self.is_human:
+                    self.parent.send_all_ais("gps " + raw_cmd)
+
             except:
                 break
 
