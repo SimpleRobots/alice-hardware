@@ -40,3 +40,6 @@ You can also use the alice-remote to control the robot manually.
 ## Manufacturing AliceBot Hardware
 
 TOOD coming sooner or later
+### Wiring-Diagram
+
+![Wiring diagram](https://github.com/penguinmenac3/alice-hardware/blob/master/Wiring%20Alice.png?raw=true)
