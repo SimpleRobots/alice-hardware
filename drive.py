@@ -58,8 +58,11 @@ class Driver(object):
             v_right = -v_right
 
         # Actually set the duty for the motor
-        self.left_pwm.ChangeDutyCycle(v_left)
-        self.right_pwm.ChangeDutyCycle(v_right)
+        print("******************************")
+        print(v_left)
+        print(v_right)
+        self.left_pwm.ChangeDutyCycle(v_left * 100.0)
+        self.right_pwm.ChangeDutyCycle(v_right * 100.0)
 
     def kill(self):
         # When killing reseting the pwm so the motors deinitialize
