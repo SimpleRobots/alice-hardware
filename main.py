@@ -123,6 +123,10 @@ class HardwareNetworkAPI(object):
             measurement = self.sensor.poll()
             self.send_all("sense " + " ".join(('%.2f' % x) for x in measurement))
 
+            # Send local position (odometry)
+            local_pos = self.d.get_local_position(1.0 / POLL_RATE_HZ)
+            self.send_all("pos %.3f %.3f %.3f %.3f" % local_pos)
+
             # Capture image from camera if availible
             if self.cap is not None:
                 retval, img = cv2.read()

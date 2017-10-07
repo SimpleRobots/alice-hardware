@@ -1,4 +1,5 @@
 import RPi.GPIO as GPIO
+import math
 
 LEFT_POWER = 11
 RIGHT_POWER = 3
@@ -28,6 +29,29 @@ class Driver(object):
 
         GPIO.output(LEFT_POWER, GPIO.LOW)
         GPIO.output(RIGHT_POWER, GPIO.LOW)
+        self.v_l = 0
+        self.v_r = 0
+
+        self.x = 0
+        self.y = 0
+        self.heading = 0
+
+    def get_local_position(self, dt):
+        v_avg = 1.0 / 2.0 * (self.v_l + self.v_r)
+        dx = math.cos(self.heading) * v_avg
+        dy = math.sin(self.heading) * v_avg
+        dtheta = 1.0 / WHEELBASE * (self.v_r - self.v_l)
+
+        self.x += dx * dt
+        self.y += dy * dt
+        self.heading += dtheta * dt
+
+        while self.heading > math.pi:
+            self.heading -= 2 * math.pi
+        while self.heading <= -math.pi:
+            self.heading += 2 * math.pi
+
+        return self.x, self.y, self.heading, 0.01 # precision is cm precision
         
     def set_speed(self, v_left, v_right):
         # Cap the max speed, so that you do not set values larger than allowed
@@ -37,6 +61,12 @@ class Driver(object):
         # Transform speed to PWM
         v_left /= MAX_SPEED_LEFT
         v_right /= MAX_SPEED_RIGHT
+
+        # Set the local variable to the current speed settings (required for odometry)
+        if abs(v_right) > POWER_THRESHOLD:
+            self.v_r = v_right / abs(v_right) * MAX_SPEED_RIGHT
+        if abs(v_right) > POWER_THRESHOLD:
+            self.v_r = v_left / abs(v_left) * MAX_SPEED_LEFT
 
         # Controll the motor direction correctly
         if v_left >= 0:
