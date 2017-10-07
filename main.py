@@ -4,7 +4,16 @@ import socket
 import threading
 from ultrasonic import Sensor
 import sys
+import base64
 
+HAS_CV = False
+try:
+    import cv2
+    HAS_CV = True
+except:
+    print("HINT: You may want to install opencv to have camera support.")
+
+IMAGE_RESOLUTION = (800, 600)
 HOST = "0.0.0.0"
 PORT = 2323
 POLL_RATE_HZ = 10
@@ -36,9 +45,11 @@ class Connection(object):
                     if self.parent.ai_mode:
                         print("Human stealing control")
                     self.parent.ai_mode = False
+                    self.parent.d.stop_timeout = POLL_RATE_HZ / 2
                     self.parent.d.set_speed(int(parts[1]), int(parts[2]))
                     self.parent.send_all_ais(raw_cmd)
                 elif cmd == "drive" and self.is_ai and self.parent.ai_mode:
+                    self.parent.d.stop_timeout = POLL_RATE_HZ / 2
                     self.parent.d.set_speed(int(parts[1]), int(parts[2]))
                     self.parent.send_all_ais(raw_cmd)
                 elif cmd == "reward":
@@ -83,20 +94,49 @@ class HardwareNetworkAPI(object):
         self.d = Driver()
         self.sensor = Sensor()
         self.ai_mode = True
+        self.stop_timeout = POLL_RATE_HZ / 2
         self.connections = []
         self.mark_for_removal = []
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((HOST, PORT))
         self.sock.listen(10)
+        self.cap = None
+        if HAS_CV:
+            try:
+                self.cap = cv2.VideoCapture(0)
+            except:
+                self.cap = None
+                print("WARNING: Cannot open camera. Is one connected?")
         t = threading.Thread(target=self.accept_connection)
         t.daemon = True
         t.start()
 
     def sensor_loop(self):
         while True:
+            # If no message for some time, stop.
+            self.stop_timeout -= 1
+            if self.stop_timeout < 0:
+                self.d.set_speed(0, 0)
+            
+            # Measure ultrasonic
             measurement = self.sensor.poll()
             self.send_all("sense " + " ".join(('%.2f' % x) for x in measurement))
+
+            # Capture image from camera if availible
+            if self.cap is not None:
+                retval, img = cv2.read()
+                img = cv2.resize(img, IMAGE_RESOLUTION)
+                if retval:
+                    _, img_encoded = cv2.imencode('.jpg', img)
+                    jpg_as_text = base64.b64encode(img_encoded)
+                    self.send_all("img " + jpg_as_text)
+                else:
+                    self.cap.release()
+                    self.cap = None
+                    print("WARNING: Connection to video capture lost.")
+
+            # Wait for next cycle
             sleep( 1.0 / POLL_RATE_HZ )
 
     def accept_connection(self):
@@ -136,6 +176,11 @@ class HardwareNetworkAPI(object):
         self.mark_for_removal = []
         self.lock.release()
 
+    def kill(self):
+        self.d.kill()
+        if self.cap is not None:
+            self.cap.release()
+
 
 def main():
     api = HardwareNetworkAPI()
@@ -143,7 +188,7 @@ def main():
         api.sensor_loop()
     except:
         print("Stopping...")
-    api.d.kill()
+    api.kill()
 
 if __name__ == "__main__":
     main()
