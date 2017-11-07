@@ -129,7 +129,7 @@ class HardwareNetworkAPI(object):
 
             # Capture image from camera if availible
             if self.cap is not None:
-                retval, img = cv2.read()
+                retval, img = self.cap.read()
                 img = cv2.resize(img, IMAGE_RESOLUTION)
                 if retval:
                     _, img_encoded = cv2.imencode('.jpg', img)
